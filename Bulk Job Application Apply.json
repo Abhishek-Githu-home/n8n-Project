@@ -1,0 +1,289 @@
+{
+  "name": "Bulk Job Application Sender",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Bulk Job Application Sender",
+        "formDescription": "Upload the job-openings PDF and your resume (PDF). The openings that match your resume skills and experience are picked and each recruiter is emailed with your resume attached. Use Preview mode first to receive all emails yourself.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Job openings PDF",
+              "fieldType": "file",
+              "fieldName": "jd_pdf",
+              "multipleFiles": false,
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your resume (PDF)",
+              "fieldType": "file",
+              "fieldName": "resume",
+              "multipleFiles": false,
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Mode",
+              "fieldType": "dropdown",
+              "fieldName": "mode",
+              "defaultValue": "Preview - send all emails to me",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Preview - send all emails to me"
+                  },
+                  {
+                    "option": "Live - send to recruiters"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your email (receives Preview emails)",
+              "fieldType": "email",
+              "fieldName": "my_email",
+              "defaultValue": "abhishekabhi6823@gmail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your full name",
+              "fieldName": "full_name",
+              "defaultValue": "Abhishek K M",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your phone number",
+              "fieldName": "phone",
+              "defaultValue": "+91-7019891910"
+            },
+            {
+              "fieldLabel": "Your total experience (years)",
+              "fieldName": "experience_years",
+              "defaultValue": "4.6",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email subject",
+              "fieldName": "email_subject",
+              "defaultValue": "Lead QA Engineer (Manual + Automation + AI Testing) | 4+ yrs",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email body",
+              "fieldType": "textarea",
+              "fieldName": "cover_message",
+              "defaultValue": "Hi,\n\nGot to know that you are hiring. I am looking for a Lead QA Engineer (Manual + Automation + AI Testing) position. Below are my details:\n\n- Current Role: Lead Engineer (QA), HCL Technologies\n- Current Location: Bangalore\n- Experience: 4+ Yrs\n- Skills: Manual, Functional, Regression, API & E2E Automation Testing, Generative AI Testing, Agile/Scrum\n- Tools: Playwright, Cypress, Postman, Playwright MCP, GitHub Copilot, Jenkins, Git, Jira, Azure DevOps, TestRail\n- Certifications: Playwright & API Testing (Udemy), Cypress 101 (LambdaTest), HCL Agile Foundation & Associate\n- Current CTC:\n\nAttached is my resume for reference. Please share it with your colleagues. Do let me know in case you need any further information.",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Received! Matching jobs are being processed and emails will be sent shortly."
+            }
+          }
+        }
+      },
+      "id": "50b0f554-7a9e-4433-a5d4-ec099ec7bd42",
+      "name": "Application Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a3138988-6937-43e6-a5bc-6ca0f3799039"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume",
+        "options": {
+          "keepSource": "both"
+        }
+      },
+      "id": "32770b01-f076-4f5a-b5c7-12ad2528961b",
+      "name": "Read Resume",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "jd_pdf",
+        "options": {}
+      },
+      "id": "7bd40a54-3891-4550-a84a-2e1c2144c464",
+      "name": "Read Job Descriptions PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const norm = (s) => String(s || '')\n  .replace(/Ɵ/g, 'ti').replace(/Ō/g, 'ft').replace(/Ņ/g, 'fk')\n  .replace(/ﬁ/g, 'fi').replace(/ﬂ/g, 'fl').replace(/ﬀ/g, 'ff').replace(/ﬃ/g, 'ffi')\n  .replace(/[–—]/g, '-').replace(/\\r/g, '');\n\nconst form = $('Application Form').first();\nconst resumeText = norm($('Read Resume').first().json.text).toLowerCase();\nconst jdText = norm($input.first().json.text);\nconst myYears = parseFloat(String(form.json.experience_years || '').replace(/[^0-9.]/g, '')) || 0;\nconst myEmail = String(form.json.my_email || '').trim().toLowerCase();\nconst isPreview = String(form.json.mode || '').toLowerCase().startsWith('preview');\nconst resumeBinary = form.binary && form.binary.resume ? { resume: form.binary.resume } : {};\n\n// Skills: counted only when BOTH the job and your resume mention them\nconst SKILLS = [\n  ['Playwright', /playwright/], ['Cypress', /cypress/],\n  ['API testing', /\\bapi\\b|postman|rest ?api/], ['Manual testing', /manual/],\n  ['Functional testing', /functional/], ['Regression testing', /regression/],\n  ['Sanity/Smoke testing', /sanity|smoke/], ['Integration testing', /integration/],\n  ['E2E testing', /end[- ]to[- ]end|\\be2e\\b/], ['Automation', /automation/],\n  ['AI/LLM testing', /\\bllm|gen ?ai|generative|ai products|ai testing|ai-powered/],\n  ['JavaScript/TypeScript', /javascript|typescript/], ['CI/CD', /ci\\/cd|jenkins|github actions/],\n  ['Agile/Scrum', /agile|scrum/], ['Jira/Azure DevOps', /jira|azure devops/],\n  ['QA leadership', /\\blead\\b|leadership/], ['Defect management', /defect/],\n];\n// Hard blockers: job is rejected if it needs these and your resume does not mention them\nconst HARD = [\n  ['Salesforce', /salesforce/], ['SAP', /\\bsap\\b/], ['Finacle', /finacle/],\n  ['ETL/Data warehouse', /\\betl\\b|data warehouse|snowflake|databricks|great expectations/],\n  ['Bluetooth', /bluetooth/], ['Wi-Fi/5G/Telecom', /wi-?fi|\\b5g\\b|o-ran/], ['Printers', /printer/],\n  ['AR/VR', /ar\\/vr|augmented reality|virtual reality/], ['LoadRunner/NeoLoad', /loadrunner|neoload/],\n  ['TOSCA', /tosca/], ['Mainframe', /mainframe/], ['Kafka', /kafka/],\n];\n// Soft blockers: rejected only when the job also has none of your automation tools\nconst SOFT = [\n  ['Java', /\\bjava\\b(?!script)/], ['C#', /c#/], ['Selenium', /selenium/], ['Python', /python|pytest/],\n  ['JMeter', /jmeter/], ['Appium', /appium/],\n];\nconst myTools = [/playwright/, /cypress/].filter((r) => r.test(resumeText));\n\nconst lines = jdText.split('\\n');\nconst blocks = [];\nlet buf = [];\nfor (const line of lines) {\n  const m = line.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/);\n  if (m) {\n    const content = buf.map((l) => l.trim()).filter((l) => l);\n    if (content.length >= 3) blocks.push({ lines: content, email: m[0].toLowerCase() });\n    buf = [];\n  } else {\n    buf.push(line);\n  }\n}\n\nconst rangeRe = /(\\d+(?:\\.\\d+)?)\\s*(?:-|to)\\s*(\\d+(?:\\.\\d+)?)\\s*\\+?\\s*(?:yrs?|years?)/i;\nconst minRe = /(\\d+(?:\\.\\d+)?)\\s*\\+?\\s*(?:yrs?|years?)/i;\n\nconst seen = new Set();\nconst out = [];\nfor (const b of blocks) {\n  const email = b.email;\n  if (email === 'swtestingstudio@gmail.com' || email === myEmail || seen.has(email)) continue;\n  const job = b.lines.join('\\n').toLowerCase();\n\n  let expIdx = -1, min = null, max = null;\n  for (let i = 0; i < Math.min(8, b.lines.length); i++) {\n    const r = b.lines[i].match(rangeRe);\n    if (r) { expIdx = i; min = parseFloat(r[1]); max = parseFloat(r[2]); break; }\n    const s = b.lines[i].match(minRe);\n    if (s) { expIdx = i; min = parseFloat(s[1]); break; }\n  }\n  let location = b.lines[0] || '', company = b.lines[1] || '', role = b.lines[2] || '';\n  if (expIdx >= 1) {\n    role = b.lines[expIdx - 1];\n    company = expIdx >= 2 ? b.lines[expIdx - 2] : '';\n    location = expIdx >= 3 ? b.lines[0] : '';\n  }\n\n  // Experience fit (1 year tolerance either side)\n  if (myYears && min !== null && myYears + 1 < min) continue;\n  if (myYears && max !== null && myYears > max + 1) continue;\n\n  const hard = HARD.filter(([, r]) => r.test(job) && !r.test(resumeText)).map(([n]) => n);\n  if (hard.length) continue;\n  const soft = SOFT.filter(([, r]) => r.test(job) && !r.test(resumeText)).map(([n]) => n);\n  const hasMyTool = myTools.some((r) => r.test(job));\n  if (soft.length && !hasMyTool) continue;\n\n  const matched = SKILLS.filter(([, r]) => r.test(job) && r.test(resumeText)).map(([n]) => n);\n  if (matched.length < 3) continue;\n\n  seen.add(email);\n  out.push({\n    json: {\n      recruiter_email: email,\n      send_to: isPreview ? form.json.my_email : email,\n      subject: (isPreview ? '[PREVIEW to ' + email + '] ' : '') + form.json.email_subject,\n      company, role, location,\n      experience_required: min === null ? '' : (max === null ? min + '+ yrs' : min + '-' + max + ' yrs'),\n      reason: 'Matches: ' + matched.join(', '),\n      full_name: form.json.full_name,\n      phone: form.json.phone || '',\n      cover_message: form.json.cover_message,\n    },\n    binary: resumeBinary,\n  });\n}\nreturn out;\n"
+      },
+      "id": "dd6f53b8-5aaf-46d6-9fbf-0342d405a273",
+      "name": "Match Jobs and Prepare Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.send_to }}",
+        "subject": "={{ $json.subject }}",
+        "message": "=<div style=\"font-family:Arial,sans-serif;font-size:14px\">{{ $json.cover_message.replace(/\\n/g, \"<br>\") }}<br><br>Thanks &amp; regards,<br>{{ $json.full_name }}{{ $json.phone ? \"<br>Contact No - \" + $json.phone : \"\" }}</div>",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "resume"
+              }
+            ]
+          },
+          "senderName": "={{ $json.full_name }}"
+        }
+      },
+      "id": "7b3c9973-0707-4e08-9292-ddd3dc2056a1",
+      "name": "Send Application Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "webhookId": "6c51b8e4-8355-4582-b524-ecd14beb84c4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "pLA2WGbDxZo4IuUM",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Application Form": [
+      {
+        "json": {
+          "jd_pdf": {
+            "filename": "Jobs.pdf",
+            "mimetype": "application/pdf",
+            "size": 229644
+          },
+          "resume": {
+            "filename": "ABHISHEK_QA_Profile.pdf",
+            "mimetype": "application/pdf",
+            "size": 246509
+          },
+          "mode": "Preview - send all emails to me",
+          "my_email": "abhishekabhi6823@gmail.com",
+          "full_name": "Abhishek K M",
+          "phone": "+91-7019891910",
+          "experience_years": "4.6",
+          "email_subject": "Lead QA Engineer (Manual + Automation + AI Testing) | 4+ yrs",
+          "cover_message": "Hi,\r\nI came across an available position for a QA engineer, and I strongly believe it's a great fit for my skill set. Please find below attached resume for your consideration and below details \r\n\r\n • Current Role: LEAD ENGINEER ( Test Engineer ) @HCL Technologies \r\n • Current Location: Bengaluru, India (Open to any locations)\r\n • Experience: 4.6 Yrs\r\n • Skills: Skilled Test Engineer ( Manual + Automation), Playwright and Cypress Automation, Functional Testing\r\n • Tools: Claude, Git, Visual Studio, Postman, Confluence, Jira, Azure devops, Testrello, putty\r\n • Certifications: Playwright Certified, Cypress Certified from udemy and Lambdatest 101 certified, HCL Gen AI certified, HCL Prompt Engineering certified, Agile Associate and foundational certified\r\n\r\nCurrent CTC : 6.04 LPA\r\nNotice period : 15-20 days\r\n\r\nPlease find my social media details:\r\nLinkedIn Profile : https://www.linkedin.com/in/abhishek-k-m-1723a023b/\r\nGithub Profile : https://github.com/Abhishek-Githu-home\r\n\r\nRegards,\r\nAbhishek K M",
+          "submittedAt": "2026-10-06T16:55:26.239+05:30",
+          "formMode": "test"
+        },
+        "binary": {
+          "jd_pdf": {
+            "mimeType": "application/pdf",
+            "fileType": "pdf",
+            "fileExtension": "pdf",
+            "data": "filesystem-v2",
+            "fileName": "Jobs.pdf",
+            "id": "filesystem-v2:workflows/kd8Jt7C2ZPDTnAGr/executions/temp/binary_data/9154cee0-fb40-4a2a-ae71-9b9190f26154",
+            "fileSize": "230 kB",
+            "bytes": 229644
+          },
+          "resume": {
+            "mimeType": "application/pdf",
+            "fileType": "pdf",
+            "fileExtension": "pdf",
+            "data": "filesystem-v2",
+            "fileName": "ABHISHEK_QA_Profile.pdf",
+            "id": "filesystem-v2:workflows/kd8Jt7C2ZPDTnAGr/executions/temp/binary_data/223eb208-1c9c-436a-b18e-379a788defa3",
+            "fileSize": "247 kB",
+            "bytes": 246509
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Application Form": {
+      "main": [
+        [
+          {
+            "node": "Read Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Resume": {
+      "main": [
+        [
+          {
+            "node": "Read Job Descriptions PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Job Descriptions PDF": {
+      "main": [
+        [
+          {
+            "node": "Match Jobs and Prepare Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Jobs and Prepare Emails": {
+      "main": [
+        [
+          {
+            "node": "Send Application Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "19148e37-9823-4c41-bcdd-4858e65fb016",
+  "meta": {
+    "instanceId": "fe20c4e31e6cb45596adedeb0446f0660145dfb213137c3024a8d65c99de8b30"
+  },
+  "nodeGroups": [],
+  "id": "kd8Jt7C2ZPDTnAGr",
+  "tags": []
+}
