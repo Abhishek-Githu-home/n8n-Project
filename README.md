@@ -1,5 +1,7 @@
 # Bulk Job Application Sender
 
+![n8n Workflow Architecture](https://github.com/Abhishek-Githu-home/n8n-Project/raw/main/workflow-diagram.png)
+
 A powerful n8n workflow that automates the job-application process by:
 
 - accepting a JD PDF and a candidate resume PDF through a form,
@@ -9,6 +11,8 @@ A powerful n8n workflow that automates the job-application process by:
 - and sending recruiter emails automatically through Gmail.
 
 This project is designed for QA and automation-focused job seekers who want to apply to multiple roles faster while keeping the process controlled and customizable.
+
+---
 
 ## Overview
 
@@ -33,12 +37,32 @@ The workflow supports both:
 
 ## Workflow Flow
 
-```mermaid
-flowchart LR
-    A[Application Form] --> B[Read Resume]
-    B --> C[Read Job Descriptions PDF]
-    C --> D[Match Jobs and Prepare Emails]
-    D --> E[Send Application Email]
+```
+┌─────────────────────┐
+│ Application Form    │ (User uploads JD PDF + Resume PDF)
+└──────────┬──────────┘
+           │
+           ├────────────────────────────┐
+           │                            │
+           ▼                            ▼
+    ┌─────────────┐            ┌──────────────────┐
+    │Read Resume  │            │ Read Job Desc.   │
+    │Extract Text │            │ Extract Text     │
+    └──────┬──────┘            └────────┬─────────┘
+           │                            │
+           └─────────┬──────────────────┘
+                     │
+                     ▼
+         ┌──────────────────────────────┐
+         │ Match Jobs & Prepare Emails  │
+         │ (Smart Filtering Logic)      │
+         └──────────────┬───────────────┘
+                        │
+                        ▼
+         ┌──────────────────────────────┐
+         │ Send Application Email       │
+         │ (Via Gmail)                  │
+         └──────────────────────────────┘
 ```
 
 ### Node-by-node explanation
