@@ -1,6 +1,18 @@
 # Bulk Job Application Sender
 
-![n8n Workflow Architecture](https://github.com/Abhishek-Githu-home/n8n-Project/raw/main/workflow-diagram.png)
+## Workflow Architecture
+
+![n8n Bulk Job Application Workflow](./n8n-Bulk_Job_Apply.png)
+
+---
+
+## Execution Overview
+
+![n8n Execution Workflow](./n8n-Execution%20Workflow.png)
+
+---
+
+## Project Description
 
 A powerful n8n workflow that automates the job-application process by:
 
@@ -35,388 +47,279 @@ The workflow supports both:
 
 ---
 
-## Workflow Flow
+## How It Works: Step-by-Step
 
-```
-┌─────────────────────┐
-│ Application Form    │ (User uploads JD PDF + Resume PDF)
-└──────────┬──────────┘
-           │
-           ├────────────────────────────┐
-           │                            │
-           ▼                            ▼
-    ┌─────────────┐            ┌──────────────────┐
-    │Read Resume  │            │ Read Job Desc.   │
-    │Extract Text │            │ Extract Text     │
-    └──────┬──────┘            └────────┬─────────┘
-           │                            │
-           └─────────┬──────────────────┘
-                     │
-                     ▼
-         ┌──────────────────────────────┐
-         │ Match Jobs & Prepare Emails  │
-         │ (Smart Filtering Logic)      │
-         └──────────────┬───────────────┘
-                        │
-                        ▼
-         ┌──────────────────────────────┐
-         │ Send Application Email       │
-         │ (Via Gmail)                  │
-         └──────────────────────────────┘
-```
+### 1. Application Form (Entry Point)
+Users upload two PDF documents and fill in their profile:
+- Job openings PDF (contains multiple job descriptions with recruiter emails)
+- Resume PDF (candidate's profile)
+- Mode selection (Preview or Live)
+- Candidate details (email, name, phone, years of experience)
+- Email subject and body template
 
-### Node-by-node explanation
+### 2. Extract Resume Text
+The resume PDF is parsed and text is extracted, normalized, and converted to lowercase for matching.
 
-#### 1. Application Form
-A form trigger collects the candidate data and files.
+### 3. Extract Job Descriptions
+The JD PDF is parsed to identify individual job blocks. Each job block contains:
+- Location
+- Company
+- Job title/role
+- Required experience
+- Recruiter email address
 
-Required fields include:
+### 4. Smart Job Matching Algorithm
+This is where the intelligent filtering happens:
 
-- Job openings PDF
-- Resume PDF
-- Mode
-- Candidate email
-- Full name
-- Experience in years
-- Email subject
-- Email body
+**Experience Fit Check:**
+- Compares candidate experience with job requirements
+- Allows ±1 year tolerance
 
-Optional fields:
-
-- Phone number
-
-This is the entry point for the workflow and is designed to be easy to use in production or testing.
-
-#### 2. Read Resume
-The resume PDF is parsed using the Extract from File node.
-
-The extracted text is normalized and converted to lowercase so it can be matched with the JD text.
-
-#### 3. Read Job Descriptions PDF
-The JD PDF is also extracted and parsed from a PDF document.
-
-The workflow expects JD sections to be separated in a consistent format so each job block can be detected correctly.
-
-#### 4. Match Jobs and Prepare Emails
-This is the main decision-making node.
-
-It performs a keyword-based match between:
-
-- the resume text
-- the PDF of job descriptions
-- the candidate profile such as years of experience
-
-It applies:
-
-- experience fit checks
-- hard blocker logic
-- soft blocker logic
-- skill overlap checks
-- recruiter deduplication
-
-If the job passes the evaluation, it prepares the email payload for the recruiter.
-
-#### 5. Send Application Email
-The final node sends the generated email via Gmail.
-
-The resume is attached as the uploaded PDF and the candidate name is used as the sender name.
-
----
-
-## What the Workflow Checks
-
-### Experience fit
-The workflow compares the candidate's experience with the required years from the JD.
-
-Logic:
-
-- allows a tolerance of approximately ±1 year
-- rejects jobs outside the allowed range
-
-### Hard blockers
-If the JD mentions technologies or stacks that are considered incompatible with the candidate profile, the job is rejected.
-
-Examples from the workflow include:
-
-- Salesforce
-- SAP
-- Finacle
-- ETL / Data Warehouse
-- Bluetooth
-- Wi-Fi / 5G / Telecom
-- AR / VR
-- LoadRunner / NeoLoad
+**Hard Blockers (Auto-reject):**
+If the job requires these technologies and your resume doesn't mention them:
+- Salesforce, SAP, Finacle
+- ETL / Data Warehouse / Snowflake / Databricks
+- Bluetooth, Wi-Fi, 5G, Telecom
+- AR/VR
+- LoadRunner/NeoLoad
 - TOSCA
 - Mainframe
 - Kafka
 
-### Soft blockers
-These are rejected only if the job also does not mention the candidate's automation tool stack, especially Playwright or Cypress.
+**Soft Blockers (Secondary Filter):**
+Rejected only if the job doesn't mention Playwright or Cypress:
+- Java, C#, Selenium, Python, JMeter, Appium
 
-Examples include:
-
-- Java
-- C#
-- Selenium
-- Python
-- JMeter
-- Appium
-
-### Skill matching
-The workflow checks whether the JD and resume share at least 3 qualifying skills.
-
-Examples of tracked skills:
-
-- Playwright
-- Cypress
-- API testing
-- Manual testing
-- Functional testing
-- Regression testing
+**Skill Matching:**
+The job and resume must share at least 3 skills from this list:
+- Playwright, Cypress
+- API testing, Manual testing
+- Functional, Regression, Sanity/Smoke testing
+- Integration, E2E testing
 - Automation
-- AI / LLM testing
-- JavaScript / TypeScript
-- CI/CD
-- Agile / Scrum
-- Jira / Azure DevOps
+- AI/LLM testing
+- JavaScript/TypeScript
+- CI/CD (Jenkins, GitHub Actions)
+- Agile/Scrum
+- Jira/Azure DevOps
 - QA leadership
 - Defect management
 
-This makes the workflow especially well suited for QA, test automation, software testing, and AI-enabled QA roles.
+**Recruiter Deduplication:**
+- Same recruiter gets only one email per run
+- Hard-coded exclusions: swtestingstudio@gmail.com, your own email
 
----
+### 5. Send Application Emails
+Matched jobs trigger Gmail sends with:
+- Resume attached as PDF
+- Your full name as sender name
+- Subject and body from form (one template for all recruiters)
 
-## Input and Output Behavior
-
-### Inputs
-The workflow accepts:
-
-- JD PDF with multiple job postings
-- resume PDF
-- candidate information
-- email subject and email body
-- mode selection
-
-### Outputs
-The workflow creates:
-
-- recruiter-specific email payloads
-- subject lines
-- body text
-- file attachments
-- Gmail sends to either preview inbox or actual recruiters
-
-In Preview mode, the app sends everything to the candidate's own email so the candidate can validate before going live.
+In Preview mode: emails go to your inbox with `[PREVIEW to recruiter@...]` prefix
+In Live mode: emails go directly to recruiters
 
 ---
 
 ## Configuration Details
 
-### Email provider
-The workflow uses Gmail and the Gmail node with Gmail OAuth2 credentials.
+### Email Provider
+**Gmail with OAuth2 Authentication**
+- Uses n8n Gmail node v2.2
+- Requires Gmail OAuth2 credentials configured in n8n
+- Emails sent from your configured Gmail account
+- Sender name: your full name (from form)
+- Attachments: resume PDF
 
-The email is sent from the configured Gmail account, and the sender name is set to the candidate's full name.
-
-### n8n version
-This workflow is designed for recent n8n versions and uses the following node types:
-
+### n8n Version
+Designed for recent n8n versions using:
 - Form Trigger v2.6
 - Extract from File v1.1
-- Code v2
+- Code v2 (JavaScript matching logic)
 - Gmail v2.2
 
-No strict version lock is required, but a recent n8n instance is recommended.
+No strict version lock required; any recent n8n instance works (including n8n Cloud).
 
-### Environment variables / secrets
-No custom environment variables are required for the core workflow.
-
-The only real setup needed is:
-
-- connect a Gmail OAuth2 credential in n8n
-- create the workflow form
-- upload the JD and resume PDFs
+### Environment Variables
+**None required.** All configuration happens through:
+- Gmail OAuth2 credential connection
+- Form fields
+- Workflow configuration
 
 ---
 
-## Form Setup
+## Execution Performance
 
-The workflow includes a form with a set of fields like:
+### Typical Run Timing
+Based on recent successful runs:
+- **Initial extraction + matching:** ~4 seconds
+- **Per matched email sent:** ~1 second additional
+- **Example:** 20–30 matches = 20–40 seconds total
 
-- Job openings PDF
+### Email Volume
+- **Personal Gmail:** ~500 emails/day limit
+- **Google Workspace:** ~2,000 emails/day limit
+- **Per run:** No cap (limited by unique recruiter addresses in PDF)
+- **Minimum:** 0 (if no matches, run succeeds silently with no emails sent)
+
+---
+
+## Key Features
+
+✅ **Automated PDF Parsing** - Extracts text from both resume and job descriptions
+✅ **Intelligent Matching** - Keyword-based filtering with hard and soft blockers
+✅ **Experience Validation** - Checks candidate years against job requirements (±1 year tolerance)
+✅ **Skill Analysis** - Requires minimum 3 matching skills between resume and JD
+✅ **Preview Mode** - Test emails before going live to recruiters
+✅ **Bulk Sending** - One form submission, multiple recruiter emails
+✅ **No Duplicates** - Each recruiter gets only one email per run
+✅ **Customizable Templates** - Edit email subject and body before sending
+
+---
+
+## Input and Output
+
+### Inputs
+- Job openings PDF (multiple job postings)
 - Resume PDF
-- Mode
-- Candidate email
-- Full name
-- Phone number
-- Experience years
-- Email subject
-- Email body
+- Candidate email, name, phone, experience years
+- Email subject and body (customizable)
+- Mode selection (Preview/Live)
 
-### Preview vs Live mode
-
-#### Preview mode
-- sends all emails to the candidate's own email
-- adds a `[PREVIEW to recruiter@...]` prefix to the subject
-- allows safe testing before actual recruiter outreach
-
-#### Live mode
-- sends emails to the recruiter addresses extracted from the JD PDF
-- uses the same body and subject for all matched roles
+### Outputs
+- Emails sent to recruiters (or your inbox in Preview mode)
+- Resume attached to each email
+- One email per unique matched recruiter
+- Run history visible in n8n logs
 
 ---
 
-## Matching Logic Details
+## Limitations and Edge Cases
 
-The matching is rule-based and not AI-powered.
+1. **PDF Layout Dependency:** JD PDF must follow a consistent format. Each job needs:
+   - At least 3 lines of content
+   - Email address on a separate line to mark job boundary
 
-This means it is easy to understand and edit for different industries or profiles.
+2. **Text Extraction Only:** 
+   - No OCR support
+   - Scanned/image-only PDFs won't work
+   - Ligature characters (fi, fl) are auto-corrected
 
-### Rules used by the workflow
+3. **Fixed Keyword Lists:**
+   - Tuned for QA/automation roles
+   - Other profiles need code edits in "Match Jobs and Prepare Emails" node
 
-- Candidate experience must fall within a tolerance band relative to job requirements.
-- Resume and JD must share at least 3 matching skills.
-- Hard blockers are used to reject roles with incompatible technologies.
-- Soft blockers are used as a secondary filter.
-- Recruiter emails are deduplicated.
-- A recruiter is emailed only once per run.
+4. **No Personalization:**
+   - Same email body/subject for all recruiters
+   - Company, role, location guessed from line position (may be inaccurate with unusual layouts)
 
-### Limitations
-The workflow is intentionally practical but has some limits:
+5. **No Memory Between Runs:**
+   - Submitting same JD twice in Live mode emails same recruiters again
+   - No tracking of previously contacted recruiters
 
-- It expects a structured JD PDF with job blocks separated clearly.
-- It relies on text extraction, so scanned or image-only PDFs may not work.
-- It does not use OCR.
-- It does not tailor the email body per job or recruiter.
-- It does not persist previous run results.
-- It does not log rejections in a dedicated database.
-
----
-
-## Execution Behavior and Performance
-
-### Typical run timing
-Based on recent runs:
-
-- each successful run took about 4 seconds for the main flow
-- each additional matched email adds roughly 1 second
-- a run with 20–30 matched jobs usually takes around 20–40 seconds
-
-### Email volume
-The workflow has no hard cap on matched jobs but the practical limit depends on the email provider.
-
-For Gmail:
-
-- personal Gmail account: roughly 500 emails/day
-- Google Workspace: roughly 2,000 emails/day
-
-### Example realistic behavior
-- If no job fits, the run still succeeds but no email is sent.
-- If matches exist, the workflow sends one email per unique recruiter address.
-- Duplicate recruiter emails are ignored.
+6. **No Rejection Logging:**
+   - Rejected jobs are not saved or reported
+   - Only successful matches visible in n8n run history
 
 ---
 
 ## Security and Data Handling
 
 This workflow:
+- ✅ Reads PDF files only during form submission
+- ✅ Extracts text locally (no external API calls for PDF parsing)
+- ✅ Uses your Gmail account for sending (you control the credential)
+- ✅ Attaches your resume as specified
+- ✅ No data is stored between runs
 
-- reads candidate documents from the form upload
-- extracts PDF text for matching
-- sends the resume as an attachment
-- uses your configured Gmail account for sending
-
-For production usage, it is recommended to:
-
-- use a dedicated Gmail account or business account
-- validate PDFs before sending
-- review the job description input format before production use
-- verify recruiter email addresses before performing live outreach
+### Recommended for Production:
+- Use a dedicated Gmail account or Google Workspace account
+- Validate JD PDF format before large-scale runs
+- Review extracted recruiter emails in n8n logs before Live mode
+- Start with Preview mode to verify email content and recipients
 
 ---
 
 ## Example Use Case
 
-A QA engineer uploads:
+**Scenario:** A QA engineer is looking for a Lead QA Engineer role with 4+ years of automation experience.
 
-- a PDF containing 30 job listings
-- a resume highlighting Playwright, API testing, Cypress, Agile, CI/CD, and QA leadership
+**Inputs:**
+- PDF with 30 job listings from various companies
+- Resume highlighting: Playwright, Cypress, API testing, Agile, CI/CD, QA leadership
 
-The workflow:
-
-- extracts both documents,
-- identifies the jobs that share at least 3 skills,
-- rejects roles requiring incompatible stacks,
-- and sends tailored email outreach to recruiters for the qualifying roles.
-
----
-
-## Recommended Enhancements
-
-This workflow is already useful as a practical outreach automation tool. Potential future improvements include:
-
-- adding OpenAI / LLM-based job matching,
-- adding a CSV export of matched jobs,
-- adding recruiter response tracking,
-- adding automatic follow-up emails,
-- adding a pre-check to validate PDF layout before sending,
-- adding email templates per role category,
-- adding a rejection summary log for debugging and optimization.
+**Workflow Output:**
+- Identifies jobs requiring 4–5 years experience ✅
+- Filters out roles requiring SAP, Salesforce, or Mainframe ✅
+- Matches jobs with 3+ of candidate's skills ✅
+- Sends personalized emails to 8–12 recruiters with resume attached ✅
+- Preview mode lets candidate review emails before sending to recruiters ✅
 
 ---
 
 ## Best Practices
 
-To make this workflow more reliable in production:
-
-1. Use clean, structured JD PDFs.
-2. Validate the resume text before sending.
-3. Keep a dedicated preview workflow before using Live mode.
-4. Review recruiter email extraction logs regularly.
-5. Use a business Gmail account for larger sending volumes.
-6. Keep the keyword lists updated to the target job domain.
+1. **PDF Format:** Use clean, well-structured JD PDFs with consistent layout
+2. **Preview First:** Always test with Preview mode before Live
+3. **Resume Quality:** Ensure resume text is clear and contains relevant keywords
+4. **Gmail Setup:** Use a business Gmail account for larger sending volumes
+5. **Keyword Tuning:** For non-QA roles, edit the skill lists in the Code node
+6. **Monitor Sends:** Check n8n run history for any failed emails
+7. **Rate Limiting:** Space out multiple runs to avoid Gmail throttling
 
 ---
 
-## Summary
+## Recommended Enhancements
 
-This n8n workflow is a smart recruitment automation pipeline that:
+Future improvements could include:
 
-- collects candidate and role data,
-- parses PDFs,
-- matches skills and experience,
-- filters unsuitable roles,
-- and sends bulk recruiter emails with resume attachments.
+- 🔄 **LLM-based matching** - Use OpenAI to understand job requirements semantically
+- 📊 **CSV export** - Export matched jobs for tracking
+- 📧 **Response tracking** - Track recruiter replies and bounce-backs
+- 🔁 **Auto follow-up** - Send reminder emails after N days
+- ✔️ **Pre-validation** - Check PDF format before processing
+- 🎯 **Email templates** - Different templates for different role categories
+- 📋 **Rejection log** - Save reasons why jobs were rejected
 
-It is particularly effective for QA and automation job seekers and is a great example of how n8n can automate a real-world hiring workflow in a structured and scalable way.
+---
+
+## Workflow JSON
+
+The complete workflow configuration is available in: `Bulk Job Application Apply.json`
+
+To import this workflow:
+1. Copy the JSON content
+2. In n8n, create a new workflow
+3. Click "Menu" → "Import from file"
+4. Paste the JSON and click "Import"
+5. Set up your Gmail OAuth2 credential
+6. Publish and run
 
 ---
 
 ## Project Status
 
-This project is a working n8n workflow demonstrating one practical use case for browser-based automation, PDF parsing, business logic, and Gmail outreach.
+✅ **Fully Functional** - Tested in production with successful email sends
+✅ **Portfolio Ready** - Great showcase of n8n capabilities
+✅ **Automation Example** - Demonstrates PDF parsing, logic, and email integration
 
-It is ideal for:
-
-- portfolio showcase projects,
-- technical demos,
-- automation workflow presentations,
-- recruitment automation experiments,
-- and learning more about n8n workflow orchestration.
+Ideal for:
+- Recruitment automation
+- Job seeker portfolio projects
+- n8n workflow demonstrations
+- Learning automation best practices
 
 ---
 
 ## License
 
-This project is currently shared as a workflow demonstrator and can be adapted for personal or portfolio use.
-
-If you want to publish it publicly, you may also add a dedicated license file depending on how you want the workflow to be reused.
+This project is shared as a workflow demonstrator for personal and portfolio use.
 
 ---
 
-## Contact / Author
+## Author
 
-Project repository:
+**Abhishek K M**
+- GitHub: https://github.com/Abhishek-Githu-home
+- LinkedIn: https://www.linkedin.com/in/abhishek-k-m-1723a023b/
 
-- https://github.com/Abhishek-Githu-home/n8n-Project
-
-This workflow was created as a personal automation project to streamline mass job applications using n8n.
+Created as a personal automation project to streamline bulk job applications using n8n.
